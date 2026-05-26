@@ -2,18 +2,15 @@
 require_once __DIR__ . '/includes/config.php';
 initDB();
 
-if (isset($_SESSION['user'])) {
-    header('Location: dashboard.php');
-    exit;
-}
+requireGuest();
 
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name = trim($_POST['name'] ?? '');
+    $name  = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
-    $confirm = $_POST['confirm_password'] ?? '';
+    $confirm  = $_POST['confirm_password'] ?? '';
 
     if (empty($name) || empty($email) || empty($password)) {
         $error = 'Please fill in all fields.';
@@ -42,21 +39,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'name' => $name,
                 'email' => $email,
             ];
-            header('Location: dashboard.php');
-            exit;
+            redirectTo('dashboard.php');
         }
     }
 }
 ?>
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register — Brew & Bean</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-</head>
+<?php renderHead('Register — Brew & Bean'); ?>
 <body class="auth-page">
     <div class="auth-wrapper">
         <div class="auth-card page-enter">
@@ -68,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <p class="auth-subtitle">Create your account</p>
 
             <?php if ($error): ?>
-                <div class="message message-error"><?= htmlspecialchars($error) ?></div>
+                <div class="message message-error"><?= e($error) ?></div>
             <?php endif; ?>
 
             <form method="POST" class="auth-form" novalidate>

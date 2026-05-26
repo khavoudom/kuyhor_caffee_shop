@@ -1,2 +1,8 @@
 .env
+.env.local
 /.claude
+/database/*.db
+/database/*.sqlite
+/database/*.sqlite3
+*.log
+.DS_Store

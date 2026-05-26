@@ -474,7 +474,8 @@ coffee-shop/
 ├── index.html        (login — default landing)
 ├── register.html
 ├── dashboard.html
-├── style.css         (shared styles + design tokens)
+├── assets/
+│   └── style.css     (shared styles + design tokens)
 └── app.js            (shared logic: auth, products, cart, search)
 ```
 

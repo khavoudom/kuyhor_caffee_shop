@@ -2,10 +2,7 @@
 require_once __DIR__ . '/includes/config.php';
 initDB();
 
-if (isset($_SESSION['user'])) {
-    header('Location: dashboard.php');
-    exit;
-}
+requireGuest();
 
 $error = '';
 
@@ -27,8 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'name' => $user['name'],
                 'email' => $user['email'],
             ];
-            header('Location: dashboard.php');
-            exit;
+            redirectTo('dashboard.php');
         } else {
             $error = 'Invalid email or password.';
         }
@@ -37,13 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login — Brew & Bean</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-</head>
+<?php renderHead('Login — Brew & Bean'); ?>
 <body class="auth-page">
     <div class="auth-wrapper">
         <div class="auth-card page-enter">
@@ -55,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <p class="auth-subtitle">Sign in to your account</p>
 
             <?php if ($error): ?>
-                <div class="message message-error"><?= htmlspecialchars($error) ?></div>
+                <div class="message message-error"><?= e($error) ?></div>
             <?php endif; ?>
 
             <form method="POST" class="auth-form" novalidate>

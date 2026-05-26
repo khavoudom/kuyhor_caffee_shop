@@ -2,12 +2,7 @@
 require_once __DIR__ . '/includes/config.php';
 initDB();
 
-if (!isset($_SESSION['user'])) {
-    header('Location: index.php');
-    exit;
-}
-
-$user = $_SESSION['user'];
+$user = requireAuth();
 $pdo = getDB();
 
 $category = $_GET['category'] ?? '';
@@ -30,49 +25,42 @@ $sql .= " ORDER BY id ASC";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $products = $stmt->fetchAll();
+
+ob_start();
+?>
+<div class="search-bar">
+    <span class="search-icon">🔍</span>
+    <input
+        type="text"
+        id="searchInput"
+        placeholder="Search coffee..."
+        value="<?= e($search) ?>"
+    >
+</div>
+<?php
+$navCenter = ob_get_clean();
+
+ob_start();
+?>
+<a href="cart.php" class="cart-icon" id="cartIcon" title="View cart">
+    🛒
+    <span class="cart-badge" id="cartBadge">0</span>
+</a>
+<span class="user-name"><?= e($user['name']) ?></span>
+<a href="logout.php" class="btn-logout">Logout</a>
+<?php
+$navRight = ob_get_clean();
 ?>
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Brew & Bean — Dashboard</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-</head>
+<?php renderHead('Brew & Bean — Dashboard'); ?>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar">
-        <div class="nav-inner">
-            <div class="nav-left">
-                <span class="nav-logo">☕ Brew & Bean</span>
-            </div>
-            <div class="nav-center">
-                <div class="search-bar">
-                    <span class="search-icon">🔍</span>
-                    <input
-                        type="text"
-                        id="searchInput"
-                        placeholder="Search coffee..."
-                        value="<?= htmlspecialchars($search) ?>"
-                    >
-                </div>
-            </div>
-            <div class="nav-right">
-                <div class="cart-icon" id="cartIcon">
-                    🛒
-                    <span class="cart-badge" id="cartBadge">0</span>
-                </div>
-                <span class="user-name"><?= htmlspecialchars($user['name']) ?></span>
-                <a href="logout.php" class="btn-logout">Logout</a>
-            </div>
-        </div>
-    </nav>
+    <?php renderNavbar(['logoIsLink' => false, 'center' => $navCenter, 'right' => $navRight]); ?>
 
     <main class="dashboard page-enter">
         <!-- Hero -->
         <section class="hero">
-            <h1 class="hero-title">Good <?= date('a') === 'am' ? 'morning' : 'afternoon' ?>, <?= htmlspecialchars(explode(' ', $user['name'])[0]) ?> ☕</h1>
+            <h1 class="hero-title">Good <?= date('a') === 'am' ? 'morning' : 'afternoon' ?>, <?= e(explode(' ', $user['name'])[0]) ?> ☕</h1>
             <p class="hero-subtitle">What are you craving today?</p>
         </section>
 
@@ -91,24 +79,24 @@ $products = $stmt->fetchAll();
         <?php else: ?>
             <div class="product-grid" id="productGrid">
                 <?php foreach ($products as $product): ?>
-                    <div class="product-card" data-id="<?= $product['id'] ?>">
+                    <div class="product-card" data-id="<?= e($product['id']) ?>">
                         <div class="product-image-wrapper">
                             <img
-                                src="<?= htmlspecialchars($product['image_url']) ?>"
-                                alt="<?= htmlspecialchars($product['name']) ?>"
+                                src="<?= e($product['image_url']) ?>"
+                                alt="<?= e($product['name']) ?>"
                                 class="product-image"
                                 loading="lazy"
                             >
-                            <span class="category-tag tag-<?= $product['category'] ?>">
+                            <span class="category-tag tag-<?= e($product['category']) ?>">
                                 <?= $product['category'] === 'hot' ? '🔥 Hot' : '🧊 Iced' ?>
                             </span>
                         </div>
                         <div class="product-info">
-                            <h3 class="product-name"><?= htmlspecialchars($product['name']) ?></h3>
-                            <p class="product-desc"><?= htmlspecialchars($product['description']) ?></p>
+                            <h3 class="product-name"><?= e($product['name']) ?></h3>
+                            <p class="product-desc"><?= e($product['description']) ?></p>
                             <div class="product-footer">
                                 <span class="product-price">$<?= number_format($product['price'], 2) ?></span>
-                                <button class="btn-add-cart" data-id="<?= $product['id'] ?>" data-name="<?= htmlspecialchars($product['name']) ?>">+</button>
+                                <button class="btn-add-cart" data-id="<?= e($product['id']) ?>" data-name="<?= e($product['name']) ?>">+</button>
                             </div>
                         </div>
                     </div>
@@ -129,7 +117,6 @@ $products = $stmt->fetchAll();
     </section>
 
     <script>
-        // ========== Search (live filter via AJAX) ==========
         let searchTimeout;
         const searchInput = document.getElementById('searchInput');
 
@@ -147,7 +134,6 @@ $products = $stmt->fetchAll();
             }, 400);
         });
 
-        // ========== Cart ==========
         let cart = JSON.parse(sessionStorage.getItem('cbs_cart') || '[]');
 
         function updateCartBadge() {
@@ -168,11 +154,21 @@ $products = $stmt->fetchAll();
                 sessionStorage.setItem('cbs_cart', JSON.stringify(cart));
                 updateCartBadge();
 
-                // Brief animation on cart icon
                 const cartIcon = document.getElementById('cartIcon');
                 cartIcon.style.transform = 'scale(1.2)';
                 setTimeout(() => { cartIcon.style.transform = ''; }, 200);
             });
+        });
+
+        document.getElementById('cartIcon').addEventListener('click', function(e) {
+            const cartData = {};
+            cart.forEach(item => {
+                cartData[item.productId] = item.quantity;
+            });
+            if (Object.keys(cartData).length === 0) {
+                e.preventDefault();
+                alert('Your cart is empty. Add some coffee first!');
+            }
         });
 
         updateCartBadge();
